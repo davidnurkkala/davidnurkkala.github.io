@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Five Element Personality</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
+  </head>
+  <body>
+    <script>
+      const baseColors = [0x1e6d3b, 0x2487ab, 0x828483, 0xc48028, 0xc05036];
+      const names = ["Wood", "Water", "Metal", "Earth", "Fire"];
+
+      let radii = [1, 1, 1, 1, 1];
+
+      function drawScene(font) {
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(
+          -1.75,
+          1.75,
+          1.75,
+          -1.75,
+          0.1,
+          64
+        );
+        camera.position.z = 32;
+        scene.add(camera);
+
+        const renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          alpha: true,
+        });
+        renderer.setSize(512, 512);
+        document.body.appendChild(renderer.domElement);
+
+        let pentagon = null;
+        function makePentagon() {
+          if (pentagon) {
+            scene.remove(pentagon);
+          }
+
+          const shape = new THREE.Shape();
+          const positions = radii.map((radius, index) => {
+            const angle = ((Math.PI * 2) / 5) * index + Math.PI / 2;
+            return {
+              x: Math.cos(angle) * radius,
+              y: Math.sin(angle) * radius,
+            };
+          });
+          for (let i = 1; i < positions.length; i++) {
+            const prev = positions[i - 1];
+            const point = positions[i];
+            shape.moveTo(prev.x, prev.y);
+            shape.lineTo(point.x, point.y);
+          }
+          const geometry = new THREE.ShapeGeometry(shape);
+
+          let colors = [];
+          baseColors.toReversed().forEach((colorHex) => {
+            const color = new THREE.Color(colorHex);
+            colors.push(color.r);
+            colors.push(color.g);
+            colors.push(color.b);
+          });
+          colors = new Float32Array(colors);
+          geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+          pentagon = new THREE.Mesh(
+            geometry,
+            new THREE.MeshBasicMaterial({ vertexColors: true })
+          );
+
+          scene.add(pentagon);
+        }
+
+        for (let index = 0; index < 5; index++) {
+          const angle = ((Math.PI * 2) / 5) * index + Math.PI / 2;
+
+          const geometry = new THREE.TextGeometry(names[index], {
+            font: font,
+            size: 0.2,
+            height: 0.01,
+          });
+          geometry.computeBoundingBox();
+          geometry.center();
+          const mesh = new THREE.Mesh(
+            geometry,
+            new THREE.MeshBasicMaterial({ color: baseColors[index] })
+          );
+          mesh.position.x = Math.cos(angle) * 1.2;
+          mesh.position.y = Math.sin(angle) * 1.2;
+          mesh.position.z = 0.5;
+          scene.add(mesh);
+
+          const shadow = new THREE.Mesh(
+            geometry,
+            new THREE.MeshBasicMaterial({ color: 0x000000 })
+          );
+          shadow.position.x = mesh.position.x + 0.02;
+          shadow.position.y = mesh.position.y - 0.02;
+          shadow.position.z = 0.4;
+          scene.add(shadow);
+        }
+
+        function render() {
+          makePentagon();
+          renderer.render(scene, camera);
+        }
+
+        const table = document.createElement("table");
+        for (let index = 0; index < 5; index++) {
+          const row = document.createElement("tr");
+
+          const label = document.createElement("label");
+          label.textContent = names[index];
+          document.body.append(label);
+
+          const labelCell = document.createElement("td");
+          labelCell.append(label);
+          row.append(labelCell);
+
+          const slider = document.createElement("input");
+          slider.type = "range";
+          slider.min = 1;
+          slider.max = 5;
+          slider.value = 5;
+          slider.addEventListener("input", () => {
+            radii[index] = slider.value / slider.max;
+            render();
+          });
+          document.body.append(slider);
+
+          const sliderCell = document.createElement("td");
+          sliderCell.append(slider);
+          row.append(sliderCell);
+
+          table.append(row);
+        }
+        document.body.append(table);
+
+        render();
+      }
+
+      window.onload = function () {
+        const loader = new THREE.FontLoader();
+        loader.load(
+          "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/fonts/helvetiker_regular.typeface.json",
+          drawScene
+        );
+      };
+    </script>
+  </body>
+</html>
